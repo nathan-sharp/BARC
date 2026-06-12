@@ -22,9 +22,26 @@ class InboxScreen extends ConsumerWidget {
             icon: const Icon(Icons.search),
             onPressed: () {},
           ),
-          IconButton(
-            icon: const Icon(Icons.more_vert),
-            onPressed: () => ref.invalidate(inboxConvosProvider),
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'settings') {
+                context.push('/settings');
+              } else if (value == 'refresh') {
+                ref.invalidate(inboxConvosProvider);
+              }
+            },
+            itemBuilder: (BuildContext context) {
+              return const [
+                PopupMenuItem(
+                  value: 'refresh',
+                  child: Text('Refresh'),
+                ),
+                PopupMenuItem(
+                  value: 'settings',
+                  child: Text('Settings'),
+                ),
+              ];
+            },
           ),
         ],
       ),
