@@ -72,7 +72,9 @@ class InboxScreen extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {},
+        onPressed: () {
+          context.push('/new_contact');
+        },
         backgroundColor: const Color(0xFF25D366),
         foregroundColor: Colors.white,
         child: const Icon(Icons.chat),

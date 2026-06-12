@@ -46,6 +46,16 @@ class ChatRepository {
       ),
     );
   }
+
+  Future<String?> getConvoForMembers(List<String> dids) async {
+    if (_chat == null) return null;
+    try {
+      final response = await _chat!.convo.getConvoForMembers(members: dids);
+      return response.data.convo.id;
+    } catch (e) {
+      return null;
+    }
+  }
 }
 
 final chatMessagesProvider = FutureProvider.family.autoDispose<List<MessageView>, String>((ref, convoId) async {
