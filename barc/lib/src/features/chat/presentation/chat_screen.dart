@@ -40,12 +40,54 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final messagesAsync = ref.watch(chatMessagesProvider(widget.convoId));
+    final convoAsync = ref.watch(convoProvider(widget.convoId));
     final sessionAsync = ref.watch(authSessionProvider);
     final currentDid = sessionAsync.value?.did ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Chat', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: convoAsync.when(
+          loading: () => const Text('Loading...'),
+          error: (err, stack) => const Text('Chat'),
+          data: (convo) {
+            if (convo == null) return const Text('Chat');
+            final otherMembers = convo.members.where((m) => m.did != currentDid).toList();
+            if (otherMembers.isEmpty) return const Text('Chat');
+            
+            final other = otherMembers.first;
+            return Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Colors.white24,
+                  backgroundImage: other.avatar != null ? NetworkImage(other.avatar!) : null,
+                  child: other.avatar == null ? const Icon(Icons.person, color: Colors.white, size: 20) : null,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        other.displayName ?? other.handle,
+                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      Text(
+                        other.handle,
+                        style: const TextStyle(fontSize: 12, color: Colors.white70),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
         titleSpacing: 0,
         actions: [
           IconButton(icon: const Icon(Icons.videocam), onPressed: () {}),

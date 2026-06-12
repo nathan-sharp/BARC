@@ -50,13 +50,28 @@ class ChatRepository {
   Future<String?> getConvoForMembers(List<String> dids) async {
     if (_chat == null) return null;
     try {
-      final response = await _chat!.convo.getConvoForMembers(members: dids);
+      final response = await _chat.convo.getConvoForMembers(members: dids);
       return response.data.convo.id;
     } catch (e) {
       return null;
     }
   }
+
+  Future<ConvoView?> getConvo(String convoId) async {
+    if (_chat == null) return null;
+    try {
+      final response = await _chat.convo.getConvo(convoId: convoId);
+      return response.data.convo;
+    } catch (e) {
+      return null;
+    }
+  }
 }
+
+final convoProvider = FutureProvider.family.autoDispose<ConvoView?, String>((ref, convoId) async {
+  final repo = ref.watch(chatRepositoryProvider);
+  return repo.getConvo(convoId);
+});
 
 final chatMessagesProvider = FutureProvider.family.autoDispose<List<MessageView>, String>((ref, convoId) async {
   final repo = ref.watch(chatRepositoryProvider);
