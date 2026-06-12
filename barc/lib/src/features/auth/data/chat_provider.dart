@@ -5,5 +5,5 @@ import 'auth_repository.dart';
 final blueskyChatProvider = FutureProvider<BlueskyChat?>((ref) async {
   final session = await ref.watch(authSessionProvider.future);
   if (session == null) return null;
-  return BlueskyChat.fromOAuthSession(session);
+  return BlueskyChat.fromSession(session);
 });

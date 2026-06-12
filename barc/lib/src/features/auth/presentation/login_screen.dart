@@ -11,22 +11,23 @@ class LoginScreen extends ConsumerStatefulWidget {
 
 class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _handleController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
 
   Future<void> _login() async {
-    if (_handleController.text.isEmpty) return;
+    if (_handleController.text.isEmpty || _passwordController.text.isEmpty) return;
     
     setState(() => _isLoading = true);
     try {
       final repo = ref.read(authRepositoryProvider);
-      await repo.login(_handleController.text.trim());
+      await repo.login(_handleController.text.trim(), _passwordController.text.trim());
       // On success, Riverpod's authSessionProvider will update, triggering routing change
       // So we might just invalidate the provider here to force a refresh
       ref.invalidate(authSessionProvider);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ERR_AUTH_FAIL: $e')),
+          SnackBar(content: Text('Login failed: $e')),
         );
       }
     } finally {
@@ -38,37 +39,68 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('BARC TERMINAL v1.0'),
+        title: const Text('Login to BARC'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              '> INITIALIZE CONNECTION',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 48),
-            TextField(
-              controller: _handleController,
-              decoration: const InputDecoration(
-                labelText: 'INPUT AT-HANDLE (e.g., user.bsky.social)',
-                prefixText: '> ',
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(
+                Icons.chat_bubble_outline,
+                size: 64,
+                color: Color(0xFF128C7E),
               ),
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _login(),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: _isLoading ? null : _login,
-              child: _isLoading
-                  ? const CircularProgressIndicator(color: Colors.black)
-                  : const Text('EXECUTE LOGIN'),
-            ),
-          ],
+              const SizedBox(height: 24),
+              const Text(
+                'Welcome to BARC',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Sign in with your AT Protocol handle and App Password',
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 48),
+              TextField(
+                controller: _handleController,
+                decoration: const InputDecoration(
+                  labelText: 'Handle (e.g., user.bsky.social)',
+                  prefixIcon: Icon(Icons.person_outline),
+                ),
+                textInputAction: TextInputAction.next,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'App Password',
+                  prefixIcon: Icon(Icons.lock_outline),
+                ),
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _login(),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: _isLoading ? null : _login,
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text('Login'),
+              ),
+            ],
+          ),
         ),
       ),
     );

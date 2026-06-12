@@ -16,7 +16,7 @@ class BarcApp extends ConsumerWidget {
 
     return MaterialApp.router(
       title: 'BARC',
-      theme: AppTheme.retroDark,
+      theme: AppTheme.whatsappLight,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

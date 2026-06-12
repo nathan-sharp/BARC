@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:bluesky/chat_bsky_convo_defs.dart';
 import '../data/chat_repository.dart';
+import '../../auth/data/auth_repository.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String convoId;
@@ -28,7 +29,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ERR_SEND_FAIL: $e')),
+          SnackBar(content: Text('Send failed: $e')),
         );
       }
     } finally {
@@ -39,80 +40,127 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final messagesAsync = ref.watch(chatMessagesProvider(widget.convoId));
+    final sessionAsync = ref.watch(authSessionProvider);
+    final currentDid = sessionAsync.value?.did ?? '';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('BARC // THREAD: ${widget.convoId.length > 8 ? widget.convoId.substring(0, 8) : widget.convoId}...'),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: messagesAsync.when(
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: Color(0xFF00FF00)),
-              ),
-              error: (err, stack) => Center(
-                child: Text('ERR: $err', style: const TextStyle(color: Colors.red)),
-              ),
-              data: (messages) {
-                if (messages.isEmpty) {
-                  return const Center(child: Text('> NO LOGS FOUND'));
-                }
-                return ListView.builder(
-                  reverse: true, // Render bottom up
-                  itemCount: messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = messages[index];
-                    return _MessageBubble(message: msg);
-                  },
-                );
-              },
-            ),
-          ),
-          _buildInputTerminal(),
+        title: const Text('Chat', style: TextStyle(fontWeight: FontWeight.bold)),
+        titleSpacing: 0,
+        actions: [
+          IconButton(icon: const Icon(Icons.videocam), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.call), onPressed: () {}),
+          IconButton(icon: const Icon(Icons.more_vert), onPressed: () {}),
         ],
+      ),
+      body: Container(
+        color: const Color(0xFFECE5DD),
+        child: Column(
+          children: [
+            Expanded(
+              child: messagesAsync.when(
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF128C7E)),
+                ),
+                error: (err, stack) => Center(
+                  child: Text('Error: $err', style: const TextStyle(color: Colors.red)),
+                ),
+                data: (messages) {
+                  if (messages.isEmpty) {
+                    return const Center(
+                      child: Text('No messages yet', style: TextStyle(color: Colors.black54)),
+                    );
+                  }
+                  return ListView.builder(
+                    reverse: true, // Render bottom up
+                    itemCount: messages.length,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    itemBuilder: (context, index) {
+                      final msg = messages[index];
+                      return _MessageBubble(
+                        message: msg,
+                        isMe: msg.sender.did == currentDid,
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            _buildInputArea(),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildInputTerminal() {
+  Widget _buildInputArea() {
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: Color(0xFF00FF00), width: 2)),
-        color: Colors.black,
-      ),
+      color: Colors.transparent,
       padding: const EdgeInsets.all(8),
       child: SafeArea(
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            const Text('> ', style: TextStyle(color: Color(0xFF00FF00), fontSize: 20)),
             Expanded(
-              child: TextField(
-                controller: _textController,
-                style: const TextStyle(color: Color(0xFF00FF00)),
-                decoration: const InputDecoration(
-                  hintText: 'TRANSMIT_PAYLOAD...',
-                  border: InputBorder.none,
-                  enabledBorder: InputBorder.none,
-                  focusedBorder: InputBorder.none,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(24),
                 ),
-                onSubmitted: (_) => _sendMessage(),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.grey),
+                      onPressed: () {},
+                    ),
+                    Expanded(
+                      child: TextField(
+                        controller: _textController,
+                        maxLines: 5,
+                        minLines: 1,
+                        decoration: const InputDecoration(
+                          hintText: 'Message',
+                          hintStyle: TextStyle(color: Colors.grey),
+                          border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(vertical: 12),
+                          filled: false,
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.attach_file, color: Colors.grey),
+                      onPressed: () {},
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.camera_alt, color: Colors.grey),
+                      onPressed: () {},
+                    ),
+                  ],
+                ),
               ),
             ),
-            if (_isSending)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF00FF00)),
-                ),
-              )
-            else
-              IconButton(
-                icon: const Icon(Icons.send, color: Color(0xFF00FF00)),
-                onPressed: _sendMessage,
+            const SizedBox(width: 8),
+            Container(
+              decoration: const BoxDecoration(
+                color: Color(0xFF128C7E),
+                shape: BoxShape.circle,
               ),
+              child: _isSending
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      ),
+                    )
+                  : IconButton(
+                      icon: const Icon(Icons.send, color: Colors.white),
+                      onPressed: _sendMessage,
+                    ),
+            ),
           ],
         ),
       ),
@@ -122,38 +170,41 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
 class _MessageBubble extends StatelessWidget {
   final MessageView message;
-  const _MessageBubble({required this.message});
+  final bool isMe;
+
+  const _MessageBubble({required this.message, required this.isMe});
 
   @override
   Widget build(BuildContext context) {
-    final sender = message.sender.did;
     final text = message.text;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          border: Border.all(color: const Color(0xFF00FF00), width: 1),
-          color: const Color(0xFF111111),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'SRC: $sender',
-              style: const TextStyle(
-                color: Color(0xFFFFB000),
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              text,
-              style: const TextStyle(color: Color(0xFF00FF00)),
+        decoration: BoxDecoration(
+          color: isMe ? const Color(0xFFDCF8C6) : Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(12),
+            topRight: const Radius.circular(12),
+            bottomLeft: isMe ? const Radius.circular(12) : const Radius.circular(0),
+            bottomRight: isMe ? const Radius.circular(0) : const Radius.circular(12),
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              offset: Offset(0, 1),
+              blurRadius: 1,
             ),
           ],
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(color: Colors.black87, fontSize: 16),
         ),
       ),
     );
