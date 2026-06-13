@@ -6,7 +6,8 @@ import '../../auth/data/auth_repository.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String convoId;
-  const ChatScreen({super.key, required this.convoId});
+  final bool isSplitView;
+  const ChatScreen({super.key, required this.convoId, this.isSplitView = false});
 
   @override
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
@@ -44,8 +45,11 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final sessionAsync = ref.watch(authSessionProvider);
     final currentDid = sessionAsync.value?.did ?? '';
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      appBar: AppBar(
+      appBar: widget.isSplitView ? null : AppBar(
+        automaticallyImplyLeading: !widget.isSplitView,
         title: convoAsync.when(
           loading: () => const Text('Loading...'),
           error: (err, stack) => const Text('Chat'),
@@ -96,7 +100,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ],
       ),
       body: Container(
-        color: const Color(0xFFECE5DD),
+        color: isDark ? const Color(0xFF0B141A) : const Color(0xFFECE5DD),
         child: Column(
           children: [
             Expanded(
@@ -136,6 +140,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildInputArea() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       color: Colors.transparent,
       padding: const EdgeInsets.all(8),
@@ -146,13 +152,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             Expanded(
               child: Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF202C33) : Colors.white,
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: Row(
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.emoji_emotions_outlined, color: Colors.grey),
+                      icon: Icon(Icons.emoji_emotions_outlined, color: isDark ? Colors.white54 : Colors.grey),
                       onPressed: () {},
                     ),
                     Expanded(
@@ -160,23 +166,24 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         controller: _textController,
                         maxLines: 5,
                         minLines: 1,
-                        decoration: const InputDecoration(
+                        style: TextStyle(color: isDark ? Colors.white : Colors.black87),
+                        decoration: InputDecoration(
                           hintText: 'Message',
-                          hintStyle: TextStyle(color: Colors.grey),
+                          hintStyle: TextStyle(color: isDark ? Colors.white54 : Colors.grey),
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
                           filled: false,
                         ),
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.attach_file, color: Colors.grey),
+                      icon: Icon(Icons.attach_file, color: isDark ? Colors.white54 : Colors.grey),
                       onPressed: () {},
                     ),
                     IconButton(
-                      icon: const Icon(Icons.camera_alt, color: Colors.grey),
+                      icon: Icon(Icons.camera_alt, color: isDark ? Colors.white54 : Colors.grey),
                       onPressed: () {},
                     ),
                   ],
@@ -219,6 +226,17 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = message.text;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Color bubbleColor;
+    Color textColor;
+    if (isDark) {
+      bubbleColor = isMe ? const Color(0xFF005C4B) : const Color(0xFF202C33);
+      textColor = Colors.white;
+    } else {
+      bubbleColor = isMe ? const Color(0xFFDCF8C6) : Colors.white;
+      textColor = Colors.black87;
+    }
 
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
@@ -229,7 +247,7 @@ class _MessageBubble extends StatelessWidget {
           maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFFDCF8C6) : Colors.white,
+          color: bubbleColor,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(12),
             topRight: const Radius.circular(12),
@@ -246,7 +264,7 @@ class _MessageBubble extends StatelessWidget {
         ),
         child: Text(
           text,
-          style: const TextStyle(color: Colors.black87, fontSize: 16),
+          style: TextStyle(color: textColor, fontSize: 16),
         ),
       ),
     );
